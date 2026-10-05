@@ -1,0 +1,354 @@
+"use client";
+
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { ArrowLeft, ArrowRight, Brain, PlayCircle } from "lucide-react";
+import { useEffect, useState } from "react";
+import Image from "next/image";
+
+import { Badge } from "../ui/badge";
+import { Textarea } from "../ui/textarea";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import VideoModal from "../videoModal";
+
+export default function ContextQuestions({
+  setProgress,
+  date,
+  activityScores,
+  setActivityScore,
+}: {
+  setProgress: React.Dispatch<React.SetStateAction<number>>;
+  date: Date;
+  activityScores?: {
+    activity1: number | null;
+    activity2: number | null;
+    activity3: number | null;
+  };
+  setActivityScore?: (score: number) => void;
+}) {
+  const [tab, setTab] = useState("1");
+  const [feedback, setFeedback] = useState<{submitted: boolean; feedback: number}[]>([]);
+  const [quizCompleted, setQuizCompleted] = useState(false);
+  const [canProceed, setCanProceed] = useState(false);
+
+  // Load questions from backend
+  const [data, setData] = useState<
+    { question: string; answer: string; video: string }[]
+  >([]);
+
+  const [loading, setLoading] = useState(true);
+
+  const [open, setOpen] = useState(false);
+
+  // Fetch questions from backend
+  useEffect(() => {
+    const fetchQuestions = async () => {
+      try {
+        const response = await fetch("http://localhost:5000/questions");
+        if (response.ok) {
+          const result = await response.json();
+          const questions = result.questions || [];
+          if (questions.length === 0) {
+            console.log("No questions found in qas.json");
+          }
+          setData(questions);
+          // Initialize feedback array based on number of questions
+          setFeedback(questions.map(() => ({ submitted: false, feedback: -1 })));
+        } else {
+          console.error("Failed to fetch questions, status:", response.status);
+        }
+      } catch (error) {
+        console.error("Error fetching questions:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchQuestions();
+  }, []);
+
+  // Check if ALL questions are answered to enable "Finish Quiz" button
+  useEffect(() => {
+    if (data.length === 0) return;
+    const allSubmitted = feedback.slice(0, data.length).every(f => f.submitted);
+    setCanProceed(allSubmitted);
+  }, [feedback, data.length]);
+
+  // Check if all questions are answered and save performance
+  useEffect(() => {
+    if (data.length === 0) return;
+    
+    const allSubmitted = feedback.slice(0, data.length).every(f => f.submitted);
+    if (allSubmitted && !quizCompleted) {
+      setQuizCompleted(true);
+      
+      // Calculate average score for Activity 3 (Context Questions)
+      const totalScore = feedback.slice(0, data.length).reduce((sum, f) => sum + f.feedback, 0);
+      const activity3Score = (totalScore / data.length) * 10; // Convert to percentage
+      
+      // Report Activity 3 score
+      if (setActivityScore) {
+        setActivityScore(Math.round(activity3Score));
+      }
+      
+      // Calculate combined score from all 3 activities
+      const scores = [
+        activityScores?.activity1,
+        activityScores?.activity2,
+        Math.round(activity3Score)
+      ].filter(score => score !== null && score !== undefined) as number[];
+      
+      // If we have all 3 activity scores, calculate average and save
+      if (scores.length === 3) {
+        const combinedScore = Math.round(scores.reduce((sum, score) => sum + score, 0) / scores.length);
+        
+        // Save combined performance to backend
+        fetch("http://localhost:5000/performance", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            score: combinedScore,
+            date: date.toISOString(),
+            breakdown: {
+              activity1_faceRecognition: activityScores?.activity1,
+              activity2_namePeople: activityScores?.activity2,
+              activity3_contextQuestions: Math.round(activity3Score),
+            }
+          }),
+        }).catch(err => console.error("Error saving performance:", err));
+      }
+    }
+  }, [feedback, quizCompleted, date, data.length, activityScores, setActivityScore]);
+
+  // Commented out the API fetch since we're using dummy data
+  /*
+  useEffect(() => {
+    const getData = async () => {
+      const res = await fetch("/api/questions", {
+        headers: {
+          "Content-Type": "application/json",
+        },
+        cache: "no-store",
+      });
+      const data = await res.json();
+      setData(data.data);
+    };
+
+    getData();
+  }, []);
+  */
+
+  return (
+    <>
+      {data && data[parseInt(tab) - 1]?.video ? (
+        <VideoModal
+          path={data[parseInt(tab) - 1].video.replaceAll("\\", "/")}
+          open={open}
+          setOpen={setOpen}
+        />
+      ) : null}
+      <div className="flex w-full items-center justify-start">
+        <Button
+          variant="secondary"
+          onClick={() => setProgress(-1)}
+          className="mr-6"
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" /> Back
+        </Button>
+        <div className="text-lg font-medium">
+          Memory Quiz —{" "}
+          <span className="text-blue-600">{date.toDateString()}</span>
+        </div>
+        <Badge className="ml-4 h-8 px-4">Memory Quiz</Badge>
+      </div>
+
+      {loading ? (
+        <div className="mt-8 text-center text-muted-foreground">
+          Loading questions...
+        </div>
+      ) : data.length === 0 ? (
+        <div className="mt-8 text-center text-muted-foreground">
+          No questions available. Please upload videos and generate questions first.
+        </div>
+      ) : (
+        <>
+          <Tabs value={tab} onValueChange={(value) => {
+            // Only allow switching to tabs that are unlocked (previous question answered)
+            const newIndex = parseInt(value) - 1;
+            if (newIndex === 0 || feedback[newIndex - 1]?.submitted) {
+              setTab(value);
+            }
+          }} className={`mt-8 w-full max-w-4xl`}>
+            <TabsList className={`grid w-full ${
+              data.length === 1 ? 'grid-cols-1' :
+              data.length === 2 ? 'grid-cols-2' :
+              data.length === 3 ? 'grid-cols-3' :
+              data.length === 4 ? 'grid-cols-4' :
+              'grid-cols-5'
+            }`}>
+              {data.map((_, index) => {
+                const isUnlocked = index === 0 || feedback[index - 1]?.submitted;
+                return (
+                  <TabsTrigger 
+                    key={index + 1} 
+                    value={String(index + 1)}
+                    disabled={!isUnlocked}
+                    className={!isUnlocked ? 'opacity-50 cursor-not-allowed' : ''}
+                  >
+                    Question {index + 1}
+                  </TabsTrigger>
+                );
+              })}
+            </TabsList>
+          </Tabs>
+
+          {data && data[parseInt(tab) - 1] ? (
+            <Question
+              feedback={feedback}
+              setFeedback={setFeedback}
+              n={tab}
+              data={data[parseInt(tab) - 1]}
+              setOpen={setOpen}
+              totalQuestions={data.length}
+              setTab={setTab}
+            />
+          ) : null}
+          
+          {canProceed && (
+            <div className="mt-8 flex justify-center">
+              <Button
+                onClick={() => setProgress(-1)}
+                size="lg"
+                className="text-lg font-medium"
+              >
+                Finish Quiz <ArrowRight className="ml-3 h-5 w-5" />
+              </Button>
+            </div>
+          )}
+        </>
+      )}
+    </>
+  );
+}
+
+function Question({
+  n,
+  feedback,
+  setFeedback,
+  data,
+  setOpen,
+  totalQuestions,
+  setTab,
+}: {
+  n: string;
+  feedback: {
+    submitted: boolean;
+    feedback: number;
+  }[];
+  setFeedback: React.Dispatch<
+    React.SetStateAction<
+      {
+        submitted: boolean;
+        feedback: number;
+      }[]
+    >
+  >;
+  data: { question: string; answer: string; video: string };
+  setOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  totalQuestions: number;
+  setTab: React.Dispatch<React.SetStateAction<string>>;
+}) {
+  const [value, setValue] = useState("");
+
+  const onSubmit = async () => {
+    const res = await fetch("/api/accuracy", {
+      method: "POST",
+      body: JSON.stringify({
+        given: value,
+        real: data.answer,
+        video: data.video,
+      }),
+      headers: {
+        "Content-Type": "application/json",
+      },
+      cache: "no-store",
+    });
+
+    const jsonData = await res.json();
+
+    const newFeedback = [...feedback];
+    newFeedback[parseInt(n) - 1].submitted = true;
+    // Parse the response to ensure it's a number
+    const scoreValue = typeof jsonData.data === 'string' 
+      ? parseInt(jsonData.data) 
+      : jsonData.data;
+    newFeedback[parseInt(n) - 1].feedback = isNaN(scoreValue) ? 0 : scoreValue;
+
+    setFeedback(newFeedback);
+  };
+
+  const goToNextQuestion = () => {
+    const currentIndex = parseInt(n) - 1;
+    if (currentIndex < totalQuestions - 1) {
+      setTab(String(currentIndex + 2)); // Move to next question
+    }
+  };
+
+  return (
+    <>
+      <div className="mt-8 text-2xl font-medium">
+        <span className="text-blue-600">Question {n}.</span> {data?.question}
+      </div>
+      <Textarea
+        value={value}
+        onChange={(e) => {
+          setValue(e.target.value);
+        }}
+        placeholder="Answer the question here."
+        className="mt-8 h-12 max-h-36 w-full text-lg"
+      />
+      <Button
+        onClick={() => onSubmit()}
+        size="lg"
+        disabled={feedback[parseInt(n) - 1].submitted || value === ""}
+        className="mt-8 text-lg font-medium"
+      >
+        Submit <ArrowRight className="ml-3 h-4 w-4" />
+      </Button>
+
+      {feedback[parseInt(n) - 1].submitted ? (
+        <Card className="mt-6 w-full p-6">
+          <div className="mb-4 text-lg">
+            Accuracy of your response:{" "}
+            <span className="font-semibold">
+              {feedback[parseInt(n) - 1].feedback}/10
+            </span>
+          </div>
+          <div className="flex gap-4">
+            <Button
+              onClick={() => {
+                setOpen(true);
+              }}
+              className="text-lg font-medium"
+              size="lg"
+              variant="outline"
+            >
+              <PlayCircle className="mr-3 h-4 w-4" /> Watch Memory
+            </Button>
+            {parseInt(n) < totalQuestions && (
+              <Button
+                onClick={goToNextQuestion}
+                className="text-lg font-medium"
+                size="lg"
+              >
+                Next Question <ArrowRight className="ml-3 h-4 w-4" />
+              </Button>
+            )}
+          </div>
+        </Card>
+      ) : null}
+    </>
+  );
+}

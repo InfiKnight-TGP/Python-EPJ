@@ -1,0 +1,38 @@
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'http',
+        hostname: 'localhost',
+        port: '5000',
+        pathname: '/**',
+      },
+<<<<<<< HEAD
+    ],
+  },
+=======
+      {
+        protocol: 'http',
+        hostname: '127.0.0.1',
+        port: '5000',
+        pathname: '/**',
+      },
+    ],
+  },
+  async rewrites() {
+    return [
+      {
+        source: '/video_chunks/:path*',
+        destination: 'http://127.0.0.1:5000/video_chunks/:path*',
+      },
+      {
+        source: '/known-faces/:path*',
+        destination: 'http://127.0.0.1:5000/known-faces/:path*',
+      },
+    ]
+  },
+>>>>>>> d13a9c5 (Baseline commit)
+}
+
+module.exports = nextConfig

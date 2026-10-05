@@ -1,0 +1,56 @@
+{
+  "name": "cogni-connect",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@radix-ui/react-dialog": "^1.0.5",
+    "@radix-ui/react-popover": "^1.0.7",
+    "@radix-ui/react-select": "^2.0.0",
+    "@radix-ui/react-separator": "^1.0.3",
+    "@radix-ui/react-slot": "^1.0.2",
+    "@radix-ui/react-tabs": "^1.0.4",
+    "chart.js": "^4.4.0",
+    "class-variance-authority": "^0.7.0",
+    "clsx": "^2.0.0",
+    "date-fns": "^2.30.0",
+    "lucide-react": "^0.292.0",
+<<<<<<< HEAD
+    "next": "^14.0.3",
+=======
+    "next": "^14.2.25",
+>>>>>>> d13a9c5 (Baseline commit)
+    "next-themes": "^0.2.1",
+    "react": "^18.2.0",
+    "react-chartjs-2": "^5.2.0",
+    "react-day-picker": "^8.9.1",
+    "react-dom": "^18.2.0",
+<<<<<<< HEAD
+    "sharp": "^0.32.6",
+=======
+    "sharp": "^0.33.5",
+>>>>>>> d13a9c5 (Baseline commit)
+    "tailwind-merge": "^2.0.0",
+    "tailwindcss-animate": "^1.0.7"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "autoprefixer": "^10.0.1",
+<<<<<<< HEAD
+    "postcss": "^8",
+=======
+    "postcss": "^8.4.38",
+>>>>>>> d13a9c5 (Baseline commit)
+    "prettier": "^3.1.0",
+    "prettier-plugin-tailwindcss": "^0.5.7",
+    "tailwindcss": "^3.3.0",
+    "typescript": "^5"
+  }
+}
