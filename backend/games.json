@@ -1,0 +1,14 @@
+{
+  "games": [
+    { "id": "daily_recall", "levels": [1], "status": "ready" },
+    { "id": "story-builder", "levels": [1], "status": "coming_soon" },
+    { "id": "plan-the-day", "levels": [1], "status": "coming_soon" },
+    { "id": "word-association", "levels": [1], "status": "coming_soon" },
+    { "id": "odd-one-out", "levels": [1], "status": "coming_soon" },
+    { "id": "mole-path", "levels": [2, 3], "status": "coming_soon" },
+    { "id": "sorting-station", "levels": [2], "status": "coming_soon" },
+    { "id": "whack-a-mole", "levels": [2, 3], "status": "coming_soon" },
+    { "id": "attention-hunt", "levels": [3], "status": "coming_soon" },
+    { "id": "map-navigator", "levels": [3], "status": "coming_soon" }
+  ]
+}

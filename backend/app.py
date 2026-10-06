@@ -646,6 +646,69 @@ def serve_video_chunk_file(filepath):
         return jsonify({"error": str(e)}), 404
 
 
+def _local_date(value):
+    """Journal dates are the browser's local midnight sent as UTC
+    ("2025-11-07T18:30:00.000Z" for Nov 8 in IST), so convert to server-local
+    time before taking the date. Assumes server and browser share a timezone."""
+    from datetime import datetime
+    try:
+        dt = datetime.fromisoformat(value.replace('Z', '+00:00'))
+    except (AttributeError, ValueError):
+        return None
+    if dt.tzinfo:
+        dt = dt.astimezone()
+    return dt.date().isoformat()
+
+
+def _videos_for_date(date_str):
+    """(filename, journal) pairs recorded on date_str (YYYY-MM-DD), oldest upload first."""
+    journal_file = 'video_journals.json'
+    if not os.path.exists(journal_file):
+        return []
+    with open(journal_file, 'r') as f:
+        journals = json.load(f)
+    matches = [(name, j) for name, j in journals.items() if _local_date(j.get('date', '')) == date_str]
+    return sorted(matches, key=lambda m: m[1].get('timestamp', ''))
+
+
+def _chunks_folder(video_filename):
+    """process_video names the chunk folder after the uploaded file."""
+    return os.path.splitext(video_filename)[0] + '_chunks'
+
+
+@api.route('/faces-for-date', methods=['GET'])
+def faces_for_date():
+    """Names of known people detected in videos recorded on ?date=YYYY-MM-DD."""
+    date_str = request.args.get('date', '')
+    detected = []
+    try:
+        for name, _ in _videos_for_date(date_str):
+            folder = os.path.join(VIDEO_CHUNKS_ROOT, _chunks_folder(name))
+            if not os.path.isdir(folder):
+                continue
+            for file in sorted(os.listdir(folder)):
+                if file.endswith('_faces.json'):
+                    with open(os.path.join(folder, file), 'r', encoding='utf-8') as f:
+                        for names in json.load(f).values():
+                            detected.extend(n for n in names if n not in detected)
+    except Exception as e:
+        print(f"Faces for date error: {e}")
+        return jsonify({"date": date_str, "detected": [], "error": str(e)}), 500
+    return jsonify({"date": date_str, "detected": detected})
+
+
+@api.route('/daily-plan', methods=['GET'])
+def daily_plan():
+    """Game ids per level from games.json. The plan is the same every day for now."""
+    try:
+        with open('games.json', 'r', encoding='utf-8') as f:
+            games = json.load(f)["games"]
+    except Exception as e:
+        print(f"Daily plan error: {e}")
+        return jsonify({"error": str(e)}), 500
+    return jsonify({f"level{lvl}": [g["id"] for g in games if lvl in g["levels"]] for lvl in (1, 2, 3)})
+
+
 @api.route('/performance', methods=['POST'])
 def save_performance():
     """Save quiz performance score."""
@@ -657,7 +720,7 @@ def save_performance():
         
         if score is None:
             return jsonify({"error": "Score is required"}), 400
-        
+
         # Load existing performance data
         performance_file = 'performance_data.json'
         if os.path.exists(performance_file):
@@ -665,15 +728,26 @@ def save_performance():
                 performance_data = json.load(f)
         else:
             performance_data = {"scores": []}
-        
-        # Add new score with timestamp and breakdown
+
         from datetime import datetime
-        performance_data["scores"].append({
-            "score": score,
-            "date": date or datetime.now().isoformat(),
-            "timestamp": datetime.now().isoformat(),
-            "breakdown": breakdown  # Store individual activity scores
-        })
+        if data.get('game_id'):
+            # Game scores are kept apart so the quiz dashboard chart is unaffected
+            performance_data.setdefault("game_scores", []).append({
+                "game_id": data['game_id'],
+                "level": data.get('level'),
+                "skill": data.get('skill'),
+                "score": score,
+                "date": date or datetime.now().isoformat(),
+                "timestamp": datetime.now().isoformat(),
+            })
+        else:
+            # Add new score with timestamp and breakdown
+            performance_data["scores"].append({
+                "score": score,
+                "date": date or datetime.now().isoformat(),
+                "timestamp": datetime.now().isoformat(),
+                "breakdown": breakdown  # Store individual activity scores
+            })
         
         # Save updated data
         with open(performance_file, 'w') as f:

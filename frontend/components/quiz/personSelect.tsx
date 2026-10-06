@@ -11,34 +11,15 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import Image from "next/image";
+import { format } from "date-fns";
 
 import { Separator } from "../ui/separator";
 import { Badge } from "../ui/badge";
 
-import Akash from "./data/Akash.jpeg";
-import Dinesh from "./data/Dinesh.jpeg";
-
 interface KnownFace {
   name: string;
   path: string;
-  isDistractor?: boolean; // Flag for static distractor faces
-  staticImage?: any; // For imported static images
 }
-
-// Static distractor faces
-const STATIC_DISTRACTORS: KnownFace[] = [
-  { name: "Akash", path: "", isDistractor: true, staticImage: Akash },
-  { name: "Dinesh", path: "", isDistractor: true, staticImage: Dinesh },
-  { name: "Bharath", path: "", isDistractor: true },
-  { name: "Kaleesh", path: "", isDistractor: true },
-  { name: "Monish", path: "", isDistractor: true },
-  { name: "Narmatha", path: "", isDistractor: true },
-  { name: "Sachein", path: "", isDistractor: true },
-  { name: "Shawn", path: "", isDistractor: true },
-  { name: "Vaibhavi", path: "", isDistractor: true },
-  { name: "Yasash", path: "", isDistractor: true },
-  { name: "Asad", path: "", isDistractor: true },
-];
 
 export default function PersonSelect({
   setProgress,
@@ -51,7 +32,7 @@ export default function PersonSelect({
 }) {
   const [selected, setSelected] = useState<number[]>([]);
   const [knownFaces, setKnownFaces] = useState<KnownFace[]>([]);
-  const [facesInVideo, setFacesInVideo] = useState<string[]>([]);
+  const [detectedNames, setDetectedNames] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [allFacesForQuiz, setAllFacesForQuiz] = useState<KnownFace[]>([]);
 
@@ -63,71 +44,60 @@ export default function PersonSelect({
     correct: boolean;
   } | null>(null);
 
-  // Fetch known faces and faces detected in videos
+  // Fetch data on date change
   useEffect(() => {
     const fetchData = async () => {
+      setLoading(true);
       try {
+        const formattedDate = format(date, "yyyy-MM-dd");
+
         // Get known faces
         const facesResponse = await fetch("http://localhost:5000/known-faces");
+        let kFaces: KnownFace[] = [];
         if (facesResponse.ok) {
           const facesData = await facesResponse.json();
-          setKnownFaces(facesData.faces || []);
+          kFaces = facesData.faces || [];
+          setKnownFaces(kFaces);
         }
 
         // Get faces detected in videos from the selected date
-        const videosResponse = await fetch("http://localhost:5000/videos");
-        if (videosResponse.ok) {
-          const videosData = await videosResponse.json();
-          console.log("Selected date:", date.toDateString());
-          console.log("All videos:", videosData);
-          
-          // Find videos matching the selected date
-          const matchingVideo = videosData.find((v: any) => {
-            if (v.date) {
-              const videoDate = new Date(v.date).toDateString();
-              console.log("Comparing:", videoDate, "with", date.toDateString());
-              return videoDate === date.toDateString();
-            }
-            return false;
-          });
+        const facesForDateRes = await fetch(
+          `http://localhost:5000/faces-for-date?date=${formattedDate}`
+        );
+        let dNames: string[] = [];
+        if (facesForDateRes.ok) {
+          const facesForDateData = await facesForDateRes.json();
+          dNames = facesForDateData.detected || [];
+          setDetectedNames(dNames);
+        }
 
-          console.log("Matching video:", matchingVideo);
+        // Options = people detected that day + up to 3 other known faces. Dedupe by case-insensitive name.
+        const detectedFaces: KnownFace[] = dNames.map((dName) => {
+          const found = kFaces.find(
+            (kf) => kf.name.toLowerCase() === dName.toLowerCase()
+          );
+          return found || { name: dName, path: "" };
+        });
 
-          if (matchingVideo) {
-            // Get face data for this video
-            const videoName = matchingVideo.filename.replace(/\.[^/.]+$/, "");
-            const facesJsonPath = `http://localhost:5000/video_chunks/${videoName}_chunks/chunk_0000_0010_faces.json`;
-            
-            console.log("Fetching face data from:", facesJsonPath);
-            
-            try {
-              const facesJsonResponse = await fetch(facesJsonPath);
-              if (facesJsonResponse.ok) {
-                const facesJson = await facesJsonResponse.json();
-                console.log("Face detection data:", facesJson);
-                // Extract unique face names from all chunks
-                const allFaces = new Set<string>();
-                Object.values(facesJson).forEach((names: any) => {
-                  if (Array.isArray(names)) {
-                    names.forEach(name => {
-                      // Convert underscores to spaces to match the backend format
-                      const normalizedName = name.replace(/_/g, ' ');
-                      allFaces.add(normalizedName);
-                    });
-                  }
-                });
-                console.log("Faces detected in video:", Array.from(allFaces));
-                setFacesInVideo(Array.from(allFaces));
-              }
-            } catch (error) {
-              console.error("Error fetching face data:", error);
-            }
-          } else {
-            console.log("No matching video found for date:", date.toDateString());
+        const otherFaces = kFaces.filter(
+          (kf) => !dNames.some((d) => d.toLowerCase() === kf.name.toLowerCase())
+        );
+
+        const distractors = otherFaces.slice(0, 3);
+
+        const seen = new Set<string>();
+        const combined: KnownFace[] = [];
+        for (const f of [...detectedFaces, ...distractors]) {
+          const lower = f.name.toLowerCase();
+          if (!seen.has(lower)) {
+            seen.add(lower);
+            combined.push(f);
           }
         }
+
+        setAllFacesForQuiz(combined);
       } catch (error) {
-        console.error("Error fetching data:", error);
+        console.error("Error fetching data for PersonSelect:", error);
       } finally {
         setLoading(false);
       }
@@ -136,47 +106,14 @@ export default function PersonSelect({
     fetchData();
   }, [date]);
 
-  // Prepare faces for quiz: detected faces + distractor faces
-  useEffect(() => {
-    if (knownFaces.length > 0) {
-      // Faces that were detected in the video
-      const detectedFaces = knownFaces.filter(face => facesInVideo.includes(face.name));
-      
-      // Faces that were NOT detected from uploaded faces (distractors)
-      const uploadedDistractors = knownFaces.filter(face => !facesInVideo.includes(face.name));
-      
-      // Calculate how many distractors we need (aim for 4-6 total faces)
-      const targetTotal = Math.max(6, detectedFaces.length + 3);
-      const neededDistractors = targetTotal - detectedFaces.length;
-      
-      // Combine uploaded distractors with static distractors
-      const allDistractors = [
-        ...uploadedDistractors,
-        ...STATIC_DISTRACTORS
-      ];
-      
-      // Randomly select the needed number of distractors
-      const selectedDistractors = allDistractors
-        .sort(() => Math.random() - 0.5)
-        .slice(0, neededDistractors);
-      
-      // Combine detected faces with distractors and shuffle
-      const combinedFaces = [...detectedFaces, ...selectedDistractors]
-        .sort(() => Math.random() - 0.5);
-      
-      setAllFacesForQuiz(combinedFaces);
-    } else if (facesInVideo.length === 0) {
-      // If no faces detected but we have known faces, show some anyway with static distractors
-      const someKnownFaces = knownFaces.slice(0, 2);
-      const someDistractors = STATIC_DISTRACTORS.slice(0, 4);
-      setAllFacesForQuiz([...someKnownFaces, ...someDistractors].sort(() => Math.random() - 0.5));
-    }
-  }, [knownFaces, facesInVideo]);
-
   // Calculate correct indices based on allFacesForQuiz
   const correctIndices = allFacesForQuiz
-    .map((face, index) => (facesInVideo.includes(face.name) ? index : -1))
-    .filter(index => index !== -1);
+    .map((face, index) =>
+      detectedNames.some((d) => d.toLowerCase() === face.name.toLowerCase())
+        ? index
+        : -1
+    )
+    .filter((index) => index !== -1);
 
   const onSubmit = () => {
     if (selected.length === 0) {
@@ -187,18 +124,18 @@ export default function PersonSelect({
         JSON.stringify(selected.sort()) === JSON.stringify(correctIndices.sort());
       if (res) setRevealed(true);
       setSubmitted({ correct: res });
-      
-      // Calculate score: percentage of correctly identified faces
-      const correctCount = selected.filter(idx => correctIndices.includes(idx)).length;
-      const incorrectCount = selected.filter(idx => !correctIndices.includes(idx)).length;
-      const missedCount = correctIndices.filter(idx => !selected.includes(idx)).length;
-      
-      // Score = (correct selections - incorrect selections) / total faces in video
-      // Ensure score is between 0 and 100
-      const totalFaces = facesInVideo.length || 1;
+
+      const correctCount = selected.filter((idx) =>
+        correctIndices.includes(idx)
+      ).length;
+      const incorrectCount = selected.filter(
+        (idx) => !correctIndices.includes(idx)
+      ).length;
+
+      const totalFaces = detectedNames.length || 1;
       const rawScore = ((correctCount - incorrectCount) / totalFaces) * 100;
       const finalScore = Math.max(0, Math.min(100, rawScore));
-      
+
       if (setActivityScore) setActivityScore(Math.round(finalScore));
     }
   };
@@ -206,8 +143,6 @@ export default function PersonSelect({
   const nullify = () => {
     setSubmitted(null);
   };
-
-  const click = () => {};
 
   return (
     <>
@@ -234,9 +169,18 @@ export default function PersonSelect({
         <div className="mt-8 text-center text-muted-foreground">
           Loading faces...
         </div>
-      ) : allFacesForQuiz.length === 0 ? (
-        <div className="mt-8 text-center text-muted-foreground">
-          No faces available for this date. Please upload faces or select a different date.
+      ) : detectedNames.length === 0 ? (
+        <div className="mt-8 flex flex-col items-center justify-center space-y-4">
+          <p className="text-center text-muted-foreground">
+            No recognized people in videos from this date
+          </p>
+          <Button
+            size="lg"
+            onClick={() => setProgress((prev) => prev + 1)}
+            className="text-lg font-medium transition-all"
+          >
+            Continue to Activity 2 <ArrowRight className="ml-3 h-4 w-4" />
+          </Button>
         </div>
       ) : (
         <>
@@ -325,7 +269,6 @@ export default function PersonSelect({
 function PersonCard({
   selected,
   click,
-  index,
   nullify,
   reveal,
   person,
@@ -340,27 +283,27 @@ function PersonCard({
     correct: boolean;
   };
 }) {
-  // Generate initials from name
   const getInitials = (name: string) => {
     return name
-      .split(' ')
-      .map(part => part[0])
-      .join('')
+      .split(" ")
+      .map((part) => part[0])
+      .join("")
       .toUpperCase()
       .slice(0, 2);
   };
 
-  // Generate consistent color from name
   const getColorFromName = (name: string) => {
     const colors = [
-      'bg-blue-500',
-      'bg-purple-500',
-      'bg-pink-500',
-      'bg-indigo-500',
-      'bg-teal-500',
-      'bg-orange-500',
+      "bg-blue-500",
+      "bg-purple-500",
+      "bg-pink-500",
+      "bg-indigo-500",
+      "bg-teal-500",
+      "bg-orange-500",
     ];
-    const index = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    const index = name
+      .split("")
+      .reduce((acc, char) => acc + char.charCodeAt(0), 0);
     return colors[index % colors.length];
   };
 
@@ -377,7 +320,7 @@ function PersonCard({
               reveal.correct
                 ? "shadow-lg shadow-green-600/50 ring-2 ring-green-600 ring-offset-2 ring-offset-background/75 border-green-600"
                 : "shadow-lg shadow-red-600/50 ring-2 ring-red-600 ring-offset-2 ring-offset-background/75 border-red-600"
-            }}`
+            }`
           : `cursor-pointer border-gray-300 ${
               selected
                 ? "shadow-lg shadow-primary/50 ring-2 ring-primary ring-offset-2 ring-offset-background/75"
@@ -385,23 +328,7 @@ function PersonCard({
             }`
       } `}
     >
-      {person.isDistractor && person.staticImage ? (
-        // Show static imported image for distractor faces
-        <Image
-          src={person.staticImage}
-          alt={person.name}
-          className="h-full w-full rounded-md object-cover"
-          width={208}
-          height={208}
-        />
-      ) : person.isDistractor ? (
-        // Fallback: Show initials if no static image
-        <div className={`h-full w-full flex flex-col items-center justify-center ${getColorFromName(person.name)} text-white`}>
-          <div className="text-6xl font-bold mb-2">{getInitials(person.name)}</div>
-          <div className="text-sm font-medium px-2 text-center">{person.name}</div>
-        </div>
-      ) : (
-        // Show actual image for real detected faces from backend
+      {person.path ? (
         <Image
           src={`http://localhost:5000/known-faces/${person.path}`}
           alt={person.name}
@@ -409,6 +336,19 @@ function PersonCard({
           width={208}
           height={208}
         />
+      ) : (
+        <div
+          className={`h-full w-full flex flex-col items-center justify-center ${getColorFromName(
+            person.name
+          )} text-white`}
+        >
+          <div className="text-6xl font-bold mb-2">
+            {getInitials(person.name)}
+          </div>
+          <div className="text-sm font-medium px-2 text-center">
+            {person.name}
+          </div>
+        </div>
       )}
     </button>
   );
