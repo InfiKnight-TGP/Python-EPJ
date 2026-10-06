@@ -5,6 +5,7 @@ from openai import OpenAI
 import os
 from dotenv import load_dotenv
 import base64
+import re
 import cv2
 from werkzeug.utils import secure_filename
 import threading
@@ -40,6 +41,7 @@ QAS_PATH = "qas.json"
 
 VIDEO_CHUNKS_ROOT = "video_chunks"  
 SUMMARY_ROOT = "summary"
+FRAMES_ROOT = "frames"  # process_video writes frames/<video>_chunks/chunk_SSSS_EEEE/<n>.jpg
 
 
 def allowed_file(filename):
@@ -695,6 +697,45 @@ def faces_for_date():
         print(f"Faces for date error: {e}")
         return jsonify({"date": date_str, "detected": [], "error": str(e)}), 500
     return jsonify({"date": date_str, "detected": detected})
+
+
+@api.route('/day-frames', methods=['GET'])
+def day_frames():
+    """Up to 4 evenly spaced frames, in time order, from videos recorded on ?date=YYYY-MM-DD.
+    timestamp is seconds into that frame's video."""
+    date_str = request.args.get('date', '')
+    frames = []
+    try:
+        for name, _ in _videos_for_date(date_str):
+            folder = _chunks_folder(name)
+            video_dir = os.path.join(FRAMES_ROOT, folder)
+            if not os.path.isdir(video_dir):
+                continue
+            for chunk in sorted(os.listdir(video_dir)):  # zero-padded start time, so this is time order
+                span = re.fullmatch(r'chunk_(\d+)_(\d+)', chunk)
+                if not span:
+                    continue
+                start, end = int(span.group(1)), int(span.group(2))
+                chunk_dir = os.path.join(video_dir, chunk)
+                numbers = sorted(int(f[:-4]) for f in os.listdir(chunk_dir) if f.endswith('.jpg') and f[:-4].isdigit())
+                for i, n in enumerate(numbers):
+                    # Frames are only numbered, so spread them evenly across the chunk's span
+                    frames.append({
+                        "url": f"/frames/{folder}/{chunk}/{n}.jpg",
+                        "timestamp": round(start + (end - start) * i / len(numbers), 1),
+                    })
+    except Exception as e:
+        print(f"Day frames error: {e}")
+        return jsonify({"date": date_str, "frames": [], "error": str(e)}), 500
+    if len(frames) > 4:
+        frames = [frames[round(i * (len(frames) - 1) / 3)] for i in range(4)]
+    return jsonify({"date": date_str, "frames": frames})
+
+
+@api.route('/frames/<path:filepath>', methods=['GET'])
+def serve_frame(filepath):
+    """Serve frames extracted by the video pipeline."""
+    return send_from_directory(os.path.abspath(FRAMES_ROOT), filepath)
 
 
 @api.route('/daily-plan', methods=['GET'])

@@ -38,7 +38,7 @@ export const GAME_REGISTRY: GameRegistryEntry[] = [
     skill: "sequencing",
     levels: [1],
     component: PlanTheDay,
-    comingSoon: true,
+    comingSoon: false,
     emoji: "📅",
     description: "Organize daily tasks in correct logical order.",
   },
