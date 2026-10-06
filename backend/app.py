@@ -122,7 +122,6 @@ def analyze_video_with_vision(video_paths, query):
 @api.route('/questions')
 def questions():
     try:
-<<<<<<< HEAD
         with open(QAS_PATH, "r") as file:
             questions_data = json.load(file)
             # Return in the format the frontend expects
@@ -194,37 +193,17 @@ def gpt_accuracy(answer1, answer2, journal_context=None):
         return response.choices[0].message.content
     except Exception as e:
         return f"Error with OpenAI API: {e}"
-=======
-        if os.path.exists(QAS_PATH):
-            with open(QAS_PATH, "r") as file:
-                questions_data = json.load(file)
-                return jsonify({"questions": questions_data})
-        return jsonify({"questions": []}), 200
-    except Exception as e:
-        print(f"Error reading questions file: {e}")
-        return jsonify({"questions": [], "error": str(e)}), 200
->>>>>>> d13a9c5 (Baseline commit)
 
 
 @api.route('/search')
 def search():
-<<<<<<< HEAD
     query = request.args.get('query')
-=======
-    query = request.args.get('query', '')
->>>>>>> d13a9c5 (Baseline commit)
     
     # Read transcripts and face data from video_chunks folders
     ref = {}
     face_data = {}
     chunks_root_abs = os.path.abspath(VIDEO_CHUNKS_ROOT)
     
-<<<<<<< HEAD
-=======
-    if not os.path.exists(chunks_root_abs):
-        return jsonify([])
-
->>>>>>> d13a9c5 (Baseline commit)
     try:
         # Scan all chunk folders
         for folder_name in os.listdir(chunks_root_abs):
@@ -235,7 +214,6 @@ def search():
             # Look for full_transcript.json
             transcript_path = os.path.join(folder_path, 'full_transcript.json')
             if os.path.exists(transcript_path):
-<<<<<<< HEAD
                 with open(transcript_path, 'r', encoding='utf-8') as f:
                     transcripts = json.load(f)
                     
@@ -243,22 +221,11 @@ def search():
                 for chunk_name, transcript_text in transcripts.items():
                     video_path = f"/{VIDEO_CHUNKS_ROOT}/{folder_name}/{chunk_name}.mp4"
                     ref[video_path] = transcript_text
-=======
-                try:
-                    with open(transcript_path, 'r', encoding='utf-8') as f:
-                        transcripts = json.load(f)
-                        for chunk_name, transcript_text in transcripts.items():
-                            video_path = f"/{VIDEO_CHUNKS_ROOT}/{folder_name}/{chunk_name}.mp4"
-                            ref[video_path] = transcript_text
-                except Exception as e:
-                    print(f"Error reading transcript {transcript_path}: {e}")
->>>>>>> d13a9c5 (Baseline commit)
             
             # Look for face recognition data
             for file in os.listdir(folder_path):
                 if file.endswith('_faces.json'):
                     face_json_path = os.path.join(folder_path, file)
-<<<<<<< HEAD
                     with open(face_json_path, 'r', encoding='utf-8') as f:
                         face_info = json.load(f)
                         # Map to video path
@@ -271,21 +238,6 @@ def search():
                                 break  # Only need one entry per file
         
         # If no transcripts found, return all available videos
-=======
-                    try:
-                        with open(face_json_path, 'r', encoding='utf-8') as f:
-                            face_info = json.load(f)
-                            chunk_name = file.replace('_faces.json', '')
-                            video_path = f"/{VIDEO_CHUNKS_ROOT}/{folder_name}/{chunk_name}.mp4"
-                            for path, names in face_info.items():
-                                if names and isinstance(names, list):
-                                    face_data[video_path] = names
-                                    break
-                    except Exception as e:
-                        print(f"Error reading face data {face_json_path}: {e}")
-        
-        # If no transcripts or faces found, return all available mp4 videos
->>>>>>> d13a9c5 (Baseline commit)
         if not ref and not face_data:
             all_videos = []
             for folder_name in os.listdir(chunks_root_abs):
@@ -298,14 +250,9 @@ def search():
         
         # Try using GPT for semantic search if API key is configured
         api_key = os.getenv('OPENAI_API_KEY', 'not_configured')
-<<<<<<< HEAD
         if api_key and api_key != 'not_configured' and api_key != 'your_openai_api_key_here':
             try:
                 # Combine transcript and face data for context
-=======
-        if api_key and api_key not in ['not_configured', 'your_openai_api_key_here', 'your_api_key_here']:
-            try:
->>>>>>> d13a9c5 (Baseline commit)
                 combined_context = {}
                 for video_path in set(list(ref.keys()) + list(face_data.keys())):
                     context_parts = []
@@ -316,11 +263,7 @@ def search():
                     combined_context[video_path] = "; ".join(context_parts)
                 
                 response = client.chat.completions.create(
-<<<<<<< HEAD
                     model='gpt-4',
-=======
-                    model='gpt-4o-mini',
->>>>>>> d13a9c5 (Baseline commit)
                     messages=[
                         {"role": "system", "content": "You are a video search assistant. Analyze the video metadata and return ONLY a JSON array of video file paths that match the user's query. Return [] if no matches."},
                         {"role": "user", "content": (
@@ -331,10 +274,7 @@ def search():
                     ]
                 )
                 result = response.choices[0].message.content.strip()
-<<<<<<< HEAD
                 # Try to parse as JSON
-=======
->>>>>>> d13a9c5 (Baseline commit)
                 if result.startswith('['):
                     matched_videos = json.loads(result)
                     if matched_videos:
@@ -353,56 +293,35 @@ def search():
         
         # Check face names for queries about people
         if any(word in query_lower for word in ['who', 'person', 'people', 'face', 'he', 'she', 'they']):
-<<<<<<< HEAD
             # Return all videos with identified faces
             for video_path, names in face_data.items():
                 if names:  # Only if faces were actually identified
                     matched_videos.append(video_path)
         
         # Also check if query contains any person's name
-=======
-            for video_path, names in face_data.items():
-                if names:
-                    matched_videos.append(video_path)
-        
-        # Check if query contains any person's name
->>>>>>> d13a9c5 (Baseline commit)
         for video_path, names in face_data.items():
             for name in names:
                 if name.lower() in query_lower:
                     matched_videos.append(video_path)
         
-<<<<<<< HEAD
         # Remove duplicates and return
         matched_videos = list(set(matched_videos))
         
         # Check if query needs visual analysis (location, objects, actions, scenes, identification)
-=======
-        matched_videos = list(set(matched_videos))
-        
->>>>>>> d13a9c5 (Baseline commit)
         visual_keywords = ['where', 'location', 'place', 'setting', 'which', 'what', 'zoo', 
                           'building', 'background', 'scene', 'happening', 'doing', 'wearing',
                           'see', 'visible', 'show', 'looks', 'appears', 'behind']
         needs_vision = any(keyword in query_lower for keyword in visual_keywords)
         
-<<<<<<< HEAD
         # If no specific matches found or query needs visual understanding, use all videos
-=======
->>>>>>> d13a9c5 (Baseline commit)
         if not matched_videos:
             matched_videos = list(set(list(ref.keys()) + list(face_data.keys())))
         
         if needs_vision and matched_videos:
-<<<<<<< HEAD
             # Use Vision API to analyze frames
             vision_answer = analyze_video_with_vision(matched_videos, query)
             if vision_answer:
                 # Return results with Vision API answer
-=======
-            vision_answer = analyze_video_with_vision(matched_videos, query)
-            if vision_answer:
->>>>>>> d13a9c5 (Baseline commit)
                 results = []
                 for video_path in matched_videos:
                     result = {"path": video_path, "vision_answer": vision_answer}
@@ -414,10 +333,7 @@ def search():
                 return jsonify(results)
         
         if matched_videos:
-<<<<<<< HEAD
             # Include metadata about what was found
-=======
->>>>>>> d13a9c5 (Baseline commit)
             results = []
             for video_path in matched_videos:
                 result = {"path": video_path}
@@ -428,10 +344,7 @@ def search():
                 results.append(result)
             return jsonify(results)
         
-<<<<<<< HEAD
         # Otherwise return all videos (no matches)
-=======
->>>>>>> d13a9c5 (Baseline commit)
         all_paths = list(set(list(ref.keys()) + list(face_data.keys())))
         results = []
         for video_path in all_paths:
@@ -445,11 +358,7 @@ def search():
         
     except Exception as e:
         print(f"Error in search: {e}")
-<<<<<<< HEAD
         return jsonify({"error": str(e)}), 500
-=======
-        return jsonify([])
->>>>>>> d13a9c5 (Baseline commit)
 
 
 @api.route('/upload', methods=['POST'])

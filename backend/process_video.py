@@ -14,16 +14,12 @@ import numpy as np
 import moviepy
 from moviepy.video.io.VideoFileClip import VideoFileClip
 import speech_recognition as sr
-<<<<<<< HEAD
-import face_recognition
-=======
 try:
     import face_recognition
     HAVE_FACE_RECOGNITION = True
 except ImportError:
     HAVE_FACE_RECOGNITION = False
     print("Warning: face_recognition library not installed. Falling back to OpenCV face detection.")
->>>>>>> d13a9c5 (Baseline commit)
 
 
 # Detect MoviePy version
@@ -175,27 +171,6 @@ def perform_face_recognition(chunks_folder):
     """Perform face recognition on video chunks."""
     print(f"Performing face recognition in: {chunks_folder}")
     
-<<<<<<< HEAD
-    # Load known faces
-    known_faces_encodings = []
-    known_faces_names = []
-    known_faces_dir = "known_faces"
-    
-    if os.path.exists(known_faces_dir) and os.listdir(known_faces_dir):
-        for file in os.listdir(known_faces_dir):
-            if file.endswith(('.jpg', '.jpeg', '.png')):
-                file_path = os.path.join(known_faces_dir, file)
-                image = face_recognition.load_image_file(file_path)
-                encodings = face_recognition.face_encodings(image)
-                if encodings:
-                    encoding = encodings[0]
-                    known_faces_encodings.append(encoding)
-                    known_faces_names.append(os.path.splitext(file)[0])
-        print(f"  Loaded {len(known_faces_names)} known faces: {known_faces_names}")
-    else:
-        print("  Warning: No known faces found")
-    
-=======
     known_faces_dir = "known_faces"
     known_faces_names = []
     
@@ -236,7 +211,6 @@ def perform_face_recognition(chunks_folder):
                             known_face_hists[name] = hist
         print(f"  OpenCV Fallback: Loaded {len(known_faces_names)} known faces: {known_faces_names}")
 
->>>>>>> d13a9c5 (Baseline commit)
     # Process video chunks
     for filename in os.listdir(chunks_folder):
         if filename.endswith((".mp4", ".mov")):
@@ -255,22 +229,6 @@ def perform_face_recognition(chunks_folder):
                 
                 # Process every 5th frame for efficiency
                 if frame_number % 5 == 0:
-<<<<<<< HEAD
-                    frame = cv2.resize(frame, (0, 0), fx=0.5, fy=0.5)
-                    face_locations = face_recognition.face_locations(frame)
-                    face_encodings = face_recognition.face_encodings(frame, face_locations)
-                    
-                    for face_encoding in face_encodings:
-                        if known_faces_encodings:
-                            matches = face_recognition.compare_faces(known_faces_encodings, face_encoding, tolerance=0.6)
-                            name = "Unknown"
-                            
-                            face_distances = face_recognition.face_distance(known_faces_encodings, face_encoding)
-                            best_match_index = np.argmin(face_distances)
-                            if matches[best_match_index]:
-                                name = known_faces_names[best_match_index]
-                            
-=======
                     frame_resized = cv2.resize(frame, (0, 0), fx=0.5, fy=0.5)
                     
                     if HAVE_FACE_RECOGNITION:
@@ -311,7 +269,6 @@ def perform_face_recognition(chunks_folder):
                             if name == "Unknown" and known_faces_names:
                                 name = known_faces_names[0]
 
->>>>>>> d13a9c5 (Baseline commit)
                             if name not in appearance_records:
                                 appearance_records[name] = []
                             appearance_records[name].append(frame_number)
@@ -338,21 +295,6 @@ def perform_face_recognition(chunks_folder):
 
 def copy_chunks_to_video_chunks(chunks_folder):
     """Copy processed chunks to video_chunks directory for frontend access."""
-<<<<<<< HEAD
-    video_chunks_dir = "video_chunks"
-    os.makedirs(video_chunks_dir, exist_ok=True)
-    
-    chunks_name = os.path.basename(chunks_folder)
-    dest_folder = os.path.join(video_chunks_dir, chunks_name)
-    
-    # Copy the entire chunks folder
-    if not os.path.exists(dest_folder):
-        import shutil
-        shutil.copytree(chunks_folder, dest_folder)
-        print(f"✓ Copied chunks to {dest_folder}")
-    else:
-        print(f"  Chunks folder already exists in video_chunks")
-=======
     import shutil
     chunks_name = os.path.basename(chunks_folder)
     
@@ -374,7 +316,6 @@ def copy_chunks_to_video_chunks(chunks_folder):
             shutil.rmtree(frontend_dest)
         shutil.copytree(chunks_folder, frontend_dest)
         print(f"✓ Copied chunks to frontend public dir {frontend_dest}")
->>>>>>> d13a9c5 (Baseline commit)
 
 
 def process_uploaded_video(video_path):

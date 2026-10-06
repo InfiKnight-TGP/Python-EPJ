@@ -15,22 +15,8 @@ import Image from "next/image";
 import { Separator } from "../ui/separator";
 import { Badge } from "../ui/badge";
 
-<<<<<<< HEAD
-// Import static distractor images
-import Bharath from "./data/Bharath.jpg";
-import Dinesh from "./data/Dinesh.png";
-import Kaleesh from "./data/Kaleesh.jpg";
-import Monish from "./data/Monish.jpg";
-import Narmatha from "./data/Narmatha.jpg";
-import Sachein from "./data/Sachein.jpg";
-import Shawn from "./data/Shawn.png";
-import Vaibhavi from "./data/Vaibhavi.jpg";
-import Yasash from "./data/Yasash.jpg";
-import Asad from "./data/Asad.jpg";
-=======
 import Akash from "./data/Akash.jpeg";
 import Dinesh from "./data/Dinesh.jpeg";
->>>>>>> d13a9c5 (Baseline commit)
 
 interface KnownFace {
   name: string;
@@ -39,20 +25,6 @@ interface KnownFace {
   staticImage?: any; // For imported static images
 }
 
-<<<<<<< HEAD
-// Static distractor faces with real images
-const STATIC_DISTRACTORS: KnownFace[] = [
-  { name: "Bharath", path: "", isDistractor: true, staticImage: Bharath },
-  { name: "Dinesh", path: "", isDistractor: true, staticImage: Dinesh },
-  { name: "Kaleesh", path: "", isDistractor: true, staticImage: Kaleesh },
-  { name: "Monish", path: "", isDistractor: true, staticImage: Monish },
-  { name: "Narmatha", path: "", isDistractor: true, staticImage: Narmatha },
-  { name: "Sachein", path: "", isDistractor: true, staticImage: Sachein },
-  { name: "Shawn", path: "", isDistractor: true, staticImage: Shawn },
-  { name: "Vaibhavi", path: "", isDistractor: true, staticImage: Vaibhavi },
-  { name: "Yasash", path: "", isDistractor: true, staticImage: Yasash },
-  { name: "Asad", path: "", isDistractor: true, staticImage: Asad },
-=======
 // Static distractor faces
 const STATIC_DISTRACTORS: KnownFace[] = [
   { name: "Akash", path: "", isDistractor: true, staticImage: Akash },
@@ -66,7 +38,6 @@ const STATIC_DISTRACTORS: KnownFace[] = [
   { name: "Vaibhavi", path: "", isDistractor: true },
   { name: "Yasash", path: "", isDistractor: true },
   { name: "Asad", path: "", isDistractor: true },
->>>>>>> d13a9c5 (Baseline commit)
 ];
 
 export default function PersonSelect({
