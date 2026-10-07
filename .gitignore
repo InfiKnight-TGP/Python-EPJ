@@ -3,6 +3,11 @@ node_modules/
 .next/
 out/
 
+# Graphify
+graphify/
+graphify-out/
+
+
 # Environments
 .env
 .env*.local
