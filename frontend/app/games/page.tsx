@@ -80,7 +80,7 @@ export default function GamesPage() {
 
     return (
       <div
-        key={game.id}
+        key={`${game.id}-l${level}`}
         className="relative group border border-border bg-card hover:border-primary/50 transition-all rounded-2xl p-6 flex flex-col justify-between shadow-sm hover:shadow-md"
       >
         <div>
@@ -105,25 +105,32 @@ export default function GamesPage() {
             {game.description}
           </p>
         </div>
-        <Button
-          variant={game.comingSoon ? "secondary" : "default"}
-          className="w-full font-semibold"
-          onClick={() => setActiveGame({ id: game.id, level })}
-        >
-          {game.comingSoon ? "Preview Game" : "Play Game"}
-        </Button>
+        {game.href ? (
+          <Link href={game.href}>
+            <Button className="w-full font-semibold">Play Game</Button>
+          </Link>
+        ) : (
+          <Button
+            variant={game.comingSoon ? "secondary" : "default"}
+            className="w-full font-semibold"
+            onClick={() => setActiveGame({ id: game.id, level })}
+          >
+            {game.comingSoon ? "Preview Game" : "Play Game"}
+          </Button>
+        )}
       </div>
     );
   };
 
   const activeGameEntry = activeGame ? getGameById(activeGame.id) : null;
+  const ActiveComponent = activeGameEntry?.component;
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
       <Nav />
       <main className="flex-1 max-w-screen-lg w-full mx-auto px-4 pt-24 pb-16">
-        {/* Active Game Player View */}
-        {activeGame && activeGameEntry ? (
+        {/* Active Game Player View (for in-place games like Plan the Day) */}
+        {activeGame && activeGameEntry && ActiveComponent ? (
           <div className="space-y-6">
             <Button
               variant="outline"
@@ -132,7 +139,7 @@ export default function GamesPage() {
             >
               <ArrowLeft className="mr-2 h-4 w-4" /> Back to Daily Plan
             </Button>
-            <activeGameEntry.component
+            <ActiveComponent
               level={activeGame.level}
               date={selectedDate}
               onFinish={(score) => {
@@ -236,15 +243,23 @@ export default function GamesPage() {
                             </p>
                           </div>
                         </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() =>
-                            setActiveGame({ id: game.id, level: game.levels[0] })
-                          }
-                        >
-                          Preview
-                        </Button>
+                        {game.href ? (
+                          <Link href={game.href}>
+                            <Button variant="outline" size="sm">
+                              Play
+                            </Button>
+                          </Link>
+                        ) : (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() =>
+                              setActiveGame({ id: game.id, level: game.levels[0] })
+                            }
+                          >
+                            {game.comingSoon ? "Preview" : "Play"}
+                          </Button>
+                        )}
                       </div>
                     ))}
                   </div>

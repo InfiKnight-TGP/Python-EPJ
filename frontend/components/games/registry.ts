@@ -15,10 +15,11 @@ export interface GameRegistryEntry {
   name: string;
   skill: string;
   levels: (1 | 2 | 3)[];
-  component: React.ComponentType<GameProps>;
+  component?: React.ComponentType<GameProps>;
   comingSoon: boolean;
   emoji: string;
   description: string;
+  href?: string;
 }
 
 export const GAME_REGISTRY: GameRegistryEntry[] = [
@@ -27,10 +28,10 @@ export const GAME_REGISTRY: GameRegistryEntry[] = [
     name: "Story Builder",
     skill: "verbal memory",
     levels: [1],
-    component: StoryBuilder,
-    comingSoon: true,
+    comingSoon: false,
     emoji: "📖",
-    description: "Remember and rebuild story sequences.",
+    description: "Read a short everyday story, then recall missing details.",
+    href: "/games/story-builder",
   },
   {
     id: "plan-the-day",
@@ -67,10 +68,10 @@ export const GAME_REGISTRY: GameRegistryEntry[] = [
     name: "Mole Path",
     skill: "working memory",
     levels: [2, 3],
-    component: MolePath,
-    comingSoon: true,
+    comingSoon: false,
     emoji: "🐹",
-    description: "Remember the sequence of tiles the mole visited.",
+    description: "Watch the circles fill, then tap the path in the same order.",
+    href: "/games/mole-path",
   },
   {
     id: "sorting-station",
@@ -97,10 +98,10 @@ export const GAME_REGISTRY: GameRegistryEntry[] = [
     name: "Attention Hunt",
     skill: "selective attention",
     levels: [3],
-    component: AttentionHunt,
-    comingSoon: true,
+    comingSoon: false,
     emoji: "🎯",
-    description: "Focus and find specific visual targets amidst noise.",
+    description: "Find every copy of the target while ignoring distractors.",
+    href: "/games/attention-hunt",
   },
   {
     id: "map-navigator",
