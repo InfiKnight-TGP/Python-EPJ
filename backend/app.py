@@ -738,6 +738,41 @@ def serve_frame(filepath):
     return send_from_directory(os.path.abspath(FRAMES_ROOT), filepath)
 
 
+ROUTINES_PATH = 'routines.json'
+
+
+@api.route('/routine', methods=['GET'])
+def get_routine():
+    """The caregiver's routine, used by Plan the Day's personal round."""
+    if not os.path.exists(ROUTINES_PATH):
+        return jsonify({"steps": []})
+    try:
+        with open(ROUTINES_PATH, 'r', encoding='utf-8') as f:
+            return jsonify({"steps": json.load(f).get("steps", [])})
+    except Exception as e:
+        print(f"Get routine error: {e}")
+        return jsonify({"steps": [], "error": str(e)}), 500
+
+
+@api.route('/routine', methods=['POST'])
+def save_routine():
+    """Replace the routine with {"steps": [...]}: 3 to 5 steps in order, each 1-40 characters."""
+    steps = (request.get_json(silent=True) or {}).get('steps')
+    if not isinstance(steps, list) or not 3 <= len(steps) <= 5:
+        return jsonify({"error": "steps must be a list of 3 to 5 items"}), 400
+    steps = [s.strip() if isinstance(s, str) else '' for s in steps]
+    if not all(0 < len(s) <= 40 for s in steps):
+        return jsonify({"error": "each step must be 1 to 40 characters"}), 400
+    from datetime import datetime
+    try:
+        with open(ROUTINES_PATH, 'w', encoding='utf-8') as f:
+            json.dump({"steps": steps, "updated": datetime.now().isoformat()}, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        print(f"Save routine error: {e}")
+        return jsonify({"error": str(e)}), 500
+    return jsonify({"steps": steps})
+
+
 @api.route('/daily-plan', methods=['GET'])
 def daily_plan():
     """Game ids per level from games.json. The plan is the same every day for now."""
