@@ -151,8 +151,8 @@ export default function Home() {
               </Card>
             </div>
             
-            <DashboardCard className="col-span-3 !h-96">
-              <div className="flex items-center text-lg font-medium">
+            <DashboardCard className="col-span-3 !h-96 flex flex-col">
+              <div className="flex items-center text-lg font-medium mb-1">
                 Memory Trends
               </div>
               <Graph />

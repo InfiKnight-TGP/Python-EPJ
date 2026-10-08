@@ -5,6 +5,7 @@ from openai import OpenAI
 import os
 from dotenv import load_dotenv
 import base64
+import re
 import cv2
 from werkzeug.utils import secure_filename
 import threading
@@ -40,6 +41,7 @@ QAS_PATH = "qas.json"
 
 VIDEO_CHUNKS_ROOT = "video_chunks"  
 SUMMARY_ROOT = "summary"
+FRAMES_ROOT = "frames"  # process_video writes frames/<video>_chunks/chunk_SSSS_EEEE/<n>.jpg
 
 
 def allowed_file(filename):
@@ -122,7 +124,6 @@ def analyze_video_with_vision(video_paths, query):
 @api.route('/questions')
 def questions():
     try:
-<<<<<<< HEAD
         with open(QAS_PATH, "r") as file:
             questions_data = json.load(file)
             # Return in the format the frontend expects
@@ -194,37 +195,17 @@ def gpt_accuracy(answer1, answer2, journal_context=None):
         return response.choices[0].message.content
     except Exception as e:
         return f"Error with OpenAI API: {e}"
-=======
-        if os.path.exists(QAS_PATH):
-            with open(QAS_PATH, "r") as file:
-                questions_data = json.load(file)
-                return jsonify({"questions": questions_data})
-        return jsonify({"questions": []}), 200
-    except Exception as e:
-        print(f"Error reading questions file: {e}")
-        return jsonify({"questions": [], "error": str(e)}), 200
->>>>>>> d13a9c5 (Baseline commit)
 
 
 @api.route('/search')
 def search():
-<<<<<<< HEAD
     query = request.args.get('query')
-=======
-    query = request.args.get('query', '')
->>>>>>> d13a9c5 (Baseline commit)
     
     # Read transcripts and face data from video_chunks folders
     ref = {}
     face_data = {}
     chunks_root_abs = os.path.abspath(VIDEO_CHUNKS_ROOT)
     
-<<<<<<< HEAD
-=======
-    if not os.path.exists(chunks_root_abs):
-        return jsonify([])
-
->>>>>>> d13a9c5 (Baseline commit)
     try:
         # Scan all chunk folders
         for folder_name in os.listdir(chunks_root_abs):
@@ -235,7 +216,6 @@ def search():
             # Look for full_transcript.json
             transcript_path = os.path.join(folder_path, 'full_transcript.json')
             if os.path.exists(transcript_path):
-<<<<<<< HEAD
                 with open(transcript_path, 'r', encoding='utf-8') as f:
                     transcripts = json.load(f)
                     
@@ -243,22 +223,11 @@ def search():
                 for chunk_name, transcript_text in transcripts.items():
                     video_path = f"/{VIDEO_CHUNKS_ROOT}/{folder_name}/{chunk_name}.mp4"
                     ref[video_path] = transcript_text
-=======
-                try:
-                    with open(transcript_path, 'r', encoding='utf-8') as f:
-                        transcripts = json.load(f)
-                        for chunk_name, transcript_text in transcripts.items():
-                            video_path = f"/{VIDEO_CHUNKS_ROOT}/{folder_name}/{chunk_name}.mp4"
-                            ref[video_path] = transcript_text
-                except Exception as e:
-                    print(f"Error reading transcript {transcript_path}: {e}")
->>>>>>> d13a9c5 (Baseline commit)
             
             # Look for face recognition data
             for file in os.listdir(folder_path):
                 if file.endswith('_faces.json'):
                     face_json_path = os.path.join(folder_path, file)
-<<<<<<< HEAD
                     with open(face_json_path, 'r', encoding='utf-8') as f:
                         face_info = json.load(f)
                         # Map to video path
@@ -271,21 +240,6 @@ def search():
                                 break  # Only need one entry per file
         
         # If no transcripts found, return all available videos
-=======
-                    try:
-                        with open(face_json_path, 'r', encoding='utf-8') as f:
-                            face_info = json.load(f)
-                            chunk_name = file.replace('_faces.json', '')
-                            video_path = f"/{VIDEO_CHUNKS_ROOT}/{folder_name}/{chunk_name}.mp4"
-                            for path, names in face_info.items():
-                                if names and isinstance(names, list):
-                                    face_data[video_path] = names
-                                    break
-                    except Exception as e:
-                        print(f"Error reading face data {face_json_path}: {e}")
-        
-        # If no transcripts or faces found, return all available mp4 videos
->>>>>>> d13a9c5 (Baseline commit)
         if not ref and not face_data:
             all_videos = []
             for folder_name in os.listdir(chunks_root_abs):
@@ -298,14 +252,9 @@ def search():
         
         # Try using GPT for semantic search if API key is configured
         api_key = os.getenv('OPENAI_API_KEY', 'not_configured')
-<<<<<<< HEAD
         if api_key and api_key != 'not_configured' and api_key != 'your_openai_api_key_here':
             try:
                 # Combine transcript and face data for context
-=======
-        if api_key and api_key not in ['not_configured', 'your_openai_api_key_here', 'your_api_key_here']:
-            try:
->>>>>>> d13a9c5 (Baseline commit)
                 combined_context = {}
                 for video_path in set(list(ref.keys()) + list(face_data.keys())):
                     context_parts = []
@@ -316,11 +265,7 @@ def search():
                     combined_context[video_path] = "; ".join(context_parts)
                 
                 response = client.chat.completions.create(
-<<<<<<< HEAD
                     model='gpt-4',
-=======
-                    model='gpt-4o-mini',
->>>>>>> d13a9c5 (Baseline commit)
                     messages=[
                         {"role": "system", "content": "You are a video search assistant. Analyze the video metadata and return ONLY a JSON array of video file paths that match the user's query. Return [] if no matches."},
                         {"role": "user", "content": (
@@ -331,10 +276,7 @@ def search():
                     ]
                 )
                 result = response.choices[0].message.content.strip()
-<<<<<<< HEAD
                 # Try to parse as JSON
-=======
->>>>>>> d13a9c5 (Baseline commit)
                 if result.startswith('['):
                     matched_videos = json.loads(result)
                     if matched_videos:
@@ -353,56 +295,35 @@ def search():
         
         # Check face names for queries about people
         if any(word in query_lower for word in ['who', 'person', 'people', 'face', 'he', 'she', 'they']):
-<<<<<<< HEAD
             # Return all videos with identified faces
             for video_path, names in face_data.items():
                 if names:  # Only if faces were actually identified
                     matched_videos.append(video_path)
         
         # Also check if query contains any person's name
-=======
-            for video_path, names in face_data.items():
-                if names:
-                    matched_videos.append(video_path)
-        
-        # Check if query contains any person's name
->>>>>>> d13a9c5 (Baseline commit)
         for video_path, names in face_data.items():
             for name in names:
                 if name.lower() in query_lower:
                     matched_videos.append(video_path)
         
-<<<<<<< HEAD
         # Remove duplicates and return
         matched_videos = list(set(matched_videos))
         
         # Check if query needs visual analysis (location, objects, actions, scenes, identification)
-=======
-        matched_videos = list(set(matched_videos))
-        
->>>>>>> d13a9c5 (Baseline commit)
         visual_keywords = ['where', 'location', 'place', 'setting', 'which', 'what', 'zoo', 
                           'building', 'background', 'scene', 'happening', 'doing', 'wearing',
                           'see', 'visible', 'show', 'looks', 'appears', 'behind']
         needs_vision = any(keyword in query_lower for keyword in visual_keywords)
         
-<<<<<<< HEAD
         # If no specific matches found or query needs visual understanding, use all videos
-=======
->>>>>>> d13a9c5 (Baseline commit)
         if not matched_videos:
             matched_videos = list(set(list(ref.keys()) + list(face_data.keys())))
         
         if needs_vision and matched_videos:
-<<<<<<< HEAD
             # Use Vision API to analyze frames
             vision_answer = analyze_video_with_vision(matched_videos, query)
             if vision_answer:
                 # Return results with Vision API answer
-=======
-            vision_answer = analyze_video_with_vision(matched_videos, query)
-            if vision_answer:
->>>>>>> d13a9c5 (Baseline commit)
                 results = []
                 for video_path in matched_videos:
                     result = {"path": video_path, "vision_answer": vision_answer}
@@ -414,10 +335,7 @@ def search():
                 return jsonify(results)
         
         if matched_videos:
-<<<<<<< HEAD
             # Include metadata about what was found
-=======
->>>>>>> d13a9c5 (Baseline commit)
             results = []
             for video_path in matched_videos:
                 result = {"path": video_path}
@@ -428,10 +346,7 @@ def search():
                 results.append(result)
             return jsonify(results)
         
-<<<<<<< HEAD
         # Otherwise return all videos (no matches)
-=======
->>>>>>> d13a9c5 (Baseline commit)
         all_paths = list(set(list(ref.keys()) + list(face_data.keys())))
         results = []
         for video_path in all_paths:
@@ -445,11 +360,7 @@ def search():
         
     except Exception as e:
         print(f"Error in search: {e}")
-<<<<<<< HEAD
         return jsonify({"error": str(e)}), 500
-=======
-        return jsonify([])
->>>>>>> d13a9c5 (Baseline commit)
 
 
 @api.route('/upload', methods=['POST'])
@@ -737,6 +648,143 @@ def serve_video_chunk_file(filepath):
         return jsonify({"error": str(e)}), 404
 
 
+def _local_date(value):
+    """Journal dates are the browser's local midnight sent as UTC
+    ("2025-11-07T18:30:00.000Z" for Nov 8 in IST), so convert to server-local
+    time before taking the date. Assumes server and browser share a timezone."""
+    from datetime import datetime
+    try:
+        dt = datetime.fromisoformat(value.replace('Z', '+00:00'))
+    except (AttributeError, ValueError):
+        return None
+    if dt.tzinfo:
+        dt = dt.astimezone()
+    return dt.date().isoformat()
+
+
+def _videos_for_date(date_str):
+    """(filename, journal) pairs recorded on date_str (YYYY-MM-DD), oldest upload first."""
+    journal_file = 'video_journals.json'
+    if not os.path.exists(journal_file):
+        return []
+    with open(journal_file, 'r') as f:
+        journals = json.load(f)
+    matches = [(name, j) for name, j in journals.items() if _local_date(j.get('date', '')) == date_str]
+    return sorted(matches, key=lambda m: m[1].get('timestamp', ''))
+
+
+def _chunks_folder(video_filename):
+    """process_video names the chunk folder after the uploaded file."""
+    return os.path.splitext(video_filename)[0] + '_chunks'
+
+
+@api.route('/faces-for-date', methods=['GET'])
+def faces_for_date():
+    """Names of known people detected in videos recorded on ?date=YYYY-MM-DD."""
+    date_str = request.args.get('date', '')
+    detected = []
+    try:
+        for name, _ in _videos_for_date(date_str):
+            folder = os.path.join(VIDEO_CHUNKS_ROOT, _chunks_folder(name))
+            if not os.path.isdir(folder):
+                continue
+            for file in sorted(os.listdir(folder)):
+                if file.endswith('_faces.json'):
+                    with open(os.path.join(folder, file), 'r', encoding='utf-8') as f:
+                        for names in json.load(f).values():
+                            detected.extend(n for n in names if n not in detected)
+    except Exception as e:
+        print(f"Faces for date error: {e}")
+        return jsonify({"date": date_str, "detected": [], "error": str(e)}), 500
+    return jsonify({"date": date_str, "detected": detected})
+
+
+@api.route('/day-frames', methods=['GET'])
+def day_frames():
+    """Up to 4 evenly spaced frames, in time order, from videos recorded on ?date=YYYY-MM-DD.
+    timestamp is seconds into that frame's video."""
+    date_str = request.args.get('date', '')
+    frames = []
+    try:
+        for name, _ in _videos_for_date(date_str):
+            folder = _chunks_folder(name)
+            video_dir = os.path.join(FRAMES_ROOT, folder)
+            if not os.path.isdir(video_dir):
+                continue
+            for chunk in sorted(os.listdir(video_dir)):  # zero-padded start time, so this is time order
+                span = re.fullmatch(r'chunk_(\d+)_(\d+)', chunk)
+                if not span:
+                    continue
+                start, end = int(span.group(1)), int(span.group(2))
+                chunk_dir = os.path.join(video_dir, chunk)
+                numbers = sorted(int(f[:-4]) for f in os.listdir(chunk_dir) if f.endswith('.jpg') and f[:-4].isdigit())
+                for i, n in enumerate(numbers):
+                    # Frames are only numbered, so spread them evenly across the chunk's span
+                    frames.append({
+                        "url": f"/frames/{folder}/{chunk}/{n}.jpg",
+                        "timestamp": round(start + (end - start) * i / len(numbers), 1),
+                    })
+    except Exception as e:
+        print(f"Day frames error: {e}")
+        return jsonify({"date": date_str, "frames": [], "error": str(e)}), 500
+    if len(frames) > 4:
+        frames = [frames[round(i * (len(frames) - 1) / 3)] for i in range(4)]
+    return jsonify({"date": date_str, "frames": frames})
+
+
+@api.route('/frames/<path:filepath>', methods=['GET'])
+def serve_frame(filepath):
+    """Serve frames extracted by the video pipeline."""
+    return send_from_directory(os.path.abspath(FRAMES_ROOT), filepath)
+
+
+ROUTINES_PATH = 'routines.json'
+
+
+@api.route('/routine', methods=['GET'])
+def get_routine():
+    """The caregiver's routine, used by Plan the Day's personal round."""
+    if not os.path.exists(ROUTINES_PATH):
+        return jsonify({"steps": []})
+    try:
+        with open(ROUTINES_PATH, 'r', encoding='utf-8') as f:
+            return jsonify({"steps": json.load(f).get("steps", [])})
+    except Exception as e:
+        print(f"Get routine error: {e}")
+        return jsonify({"steps": [], "error": str(e)}), 500
+
+
+@api.route('/routine', methods=['POST'])
+def save_routine():
+    """Replace the routine with {"steps": [...]}: 3 to 5 steps in order, each 1-40 characters."""
+    steps = (request.get_json(silent=True) or {}).get('steps')
+    if not isinstance(steps, list) or not 3 <= len(steps) <= 5:
+        return jsonify({"error": "steps must be a list of 3 to 5 items"}), 400
+    steps = [s.strip() if isinstance(s, str) else '' for s in steps]
+    if not all(0 < len(s) <= 40 for s in steps):
+        return jsonify({"error": "each step must be 1 to 40 characters"}), 400
+    from datetime import datetime
+    try:
+        with open(ROUTINES_PATH, 'w', encoding='utf-8') as f:
+            json.dump({"steps": steps, "updated": datetime.now().isoformat()}, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        print(f"Save routine error: {e}")
+        return jsonify({"error": str(e)}), 500
+    return jsonify({"steps": steps})
+
+
+@api.route('/daily-plan', methods=['GET'])
+def daily_plan():
+    """Game ids per level from games.json. The plan is the same every day for now."""
+    try:
+        with open('games.json', 'r', encoding='utf-8') as f:
+            games = json.load(f)["games"]
+    except Exception as e:
+        print(f"Daily plan error: {e}")
+        return jsonify({"error": str(e)}), 500
+    return jsonify({f"level{lvl}": [g["id"] for g in games if lvl in g["levels"]] for lvl in (1, 2, 3)})
+
+
 @api.route('/performance', methods=['POST'])
 def save_performance():
     """Save quiz performance score."""
@@ -748,7 +796,7 @@ def save_performance():
         
         if score is None:
             return jsonify({"error": "Score is required"}), 400
-        
+
         # Load existing performance data
         performance_file = 'performance_data.json'
         if os.path.exists(performance_file):
@@ -756,15 +804,26 @@ def save_performance():
                 performance_data = json.load(f)
         else:
             performance_data = {"scores": []}
-        
-        # Add new score with timestamp and breakdown
+
         from datetime import datetime
-        performance_data["scores"].append({
-            "score": score,
-            "date": date or datetime.now().isoformat(),
-            "timestamp": datetime.now().isoformat(),
-            "breakdown": breakdown  # Store individual activity scores
-        })
+        if data.get('game_id'):
+            # Game scores are kept apart so the quiz dashboard chart is unaffected
+            performance_data.setdefault("game_scores", []).append({
+                "game_id": data['game_id'],
+                "level": data.get('level'),
+                "skill": data.get('skill'),
+                "score": score,
+                "date": date or datetime.now().isoformat(),
+                "timestamp": datetime.now().isoformat(),
+            })
+        else:
+            # Add new score with timestamp and breakdown
+            performance_data["scores"].append({
+                "score": score,
+                "date": date or datetime.now().isoformat(),
+                "timestamp": datetime.now().isoformat(),
+                "breakdown": breakdown  # Store individual activity scores
+            })
         
         # Save updated data
         with open(performance_file, 'w') as f:

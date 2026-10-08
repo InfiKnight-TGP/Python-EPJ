@@ -1,0 +1,142 @@
+"use client";
+
+import React, { useState } from "react";
+import { saveScore } from "./saveScore";
+import { Button } from "@/components/ui/button";
+import { Award, Play, RotateCcw } from "lucide-react";
+
+export interface GameShellProps {
+  gameId: string;
+  title: string;
+  instructions: string;
+  level: 1 | 2 | 3;
+  skill: string;
+  date: string;
+  onFinish?: (score: number) => void;
+  children:
+    | React.ReactNode
+    | ((handleFinish: (score: number) => void) => React.ReactNode);
+}
+
+export default function GameShell({
+  gameId,
+  title,
+  instructions,
+  level,
+  skill,
+  date,
+  onFinish,
+  children,
+}: GameShellProps) {
+  const [started, setStarted] = useState(false);
+  const [finished, setFinished] = useState(false);
+  const [score, setScore] = useState<number | null>(null);
+
+  const handleFinish = async (finalScore: number) => {
+    const clampedScore = Math.max(0, Math.min(100, Math.round(finalScore)));
+    setScore(clampedScore);
+    setFinished(true);
+    setStarted(false);
+
+    // Call saveScore
+    await saveScore({
+      date,
+      game_id: gameId,
+      level,
+      skill,
+      score: clampedScore,
+    });
+
+    if (onFinish) {
+      onFinish(clampedScore);
+    }
+  };
+
+  const handleRestart = () => {
+    setStarted(false);
+    setFinished(false);
+    setScore(null);
+  };
+
+  return (
+    <div className="w-full max-w-2xl mx-auto border border-border bg-card rounded-2xl p-6 md:p-8 shadow-md">
+      {/* Header Info */}
+      <div className="flex items-center justify-between border-b border-border pb-4 mb-6">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">{title}</h1>
+          <p className="text-muted-foreground text-sm md:text-base mt-1">
+            {instructions}
+          </p>
+        </div>
+        <div className="flex flex-col items-end gap-1">
+          <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-primary/10 text-primary border border-primary/20">
+            Level {level}
+          </span>
+          <span className="text-xs text-muted-foreground capitalize">
+            {skill}
+          </span>
+        </div>
+      </div>
+
+      {/* Screen 1: Start Screen */}
+      {!started && !finished && (
+        <div className="flex flex-col items-center justify-center py-12 text-center space-y-6">
+          <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center text-primary text-3xl">
+            🎮
+          </div>
+          <div className="max-w-md space-y-2">
+            <h2 className="text-xl font-semibold">Ready to begin?</h2>
+            <p className="text-sm text-muted-foreground">
+              Click Start to launch {title}. No timers apply in Level 1.
+            </p>
+          </div>
+          <Button
+            size="lg"
+            className="px-8 py-6 text-lg font-bold shadow-lg hover:scale-105 transition-transform"
+            onClick={() => setStarted(true)}
+          >
+            <Play className="mr-2 h-5 w-5 fill-current" /> Start Game
+          </Button>
+        </div>
+      )}
+
+      {/* Screen 2: Active Game Screen */}
+      {started && !finished && (
+        <div className="py-4">
+          {typeof children === "function"
+            ? children(handleFinish)
+            : React.isValidElement(children)
+            ? React.cloneElement(children as React.ReactElement, {
+                onFinish: handleFinish,
+              })
+            : children}
+        </div>
+      )}
+
+      {/* Screen 3: Finish Screen */}
+      {finished && (
+        <div className="flex flex-col items-center justify-center py-10 text-center space-y-5">
+          <div className="w-20 h-20 rounded-full bg-green-100 dark:bg-green-950/60 flex items-center justify-center text-green-600 dark:text-green-400">
+            <Award className="h-10 w-10" />
+          </div>
+          <div className="space-y-1">
+            <h2 className="text-2xl font-bold text-green-600 dark:text-green-400">
+              Well done!
+            </h2>
+            <p className="text-lg text-foreground font-medium">
+              You scored <span className="font-extrabold text-primary">{score}</span> / 100
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            size="lg"
+            onClick={handleRestart}
+            className="mt-4"
+          >
+            <RotateCcw className="mr-2 h-4 w-4" /> Play Again
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}

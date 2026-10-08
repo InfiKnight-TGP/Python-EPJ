@@ -10,6 +10,7 @@ import { Badge } from "../ui/badge";
 import { Textarea } from "../ui/textarea";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import VideoModal from "../videoModal";
+import { format } from "date-fns";
 
 export default function ContextQuestions({
   setProgress,
@@ -91,16 +92,15 @@ export default function ContextQuestions({
         setActivityScore(Math.round(activity3Score));
       }
       
-      // Calculate combined score from all 3 activities
-      const scores = [
+      // Calculate combined score from all non-null activity scores
+      const validScores = [
         activityScores?.activity1,
         activityScores?.activity2,
         Math.round(activity3Score)
-      ].filter(score => score !== null && score !== undefined) as number[];
+      ].filter((score): score is number => score !== null && score !== undefined && !isNaN(score));
       
-      // If we have all 3 activity scores, calculate average and save
-      if (scores.length === 3) {
-        const combinedScore = Math.round(scores.reduce((sum, score) => sum + score, 0) / scores.length);
+      if (validScores.length > 0) {
+        const combinedScore = Math.round(validScores.reduce((sum, score) => sum + score, 0) / validScores.length);
         
         // Save combined performance to backend
         fetch("http://localhost:5000/performance", {
@@ -110,7 +110,7 @@ export default function ContextQuestions({
           },
           body: JSON.stringify({
             score: combinedScore,
-            date: date.toISOString(),
+            date: format(date, "yyyy-MM-dd"),
             breakdown: {
               activity1_faceRecognition: activityScores?.activity1,
               activity2_namePeople: activityScores?.activity2,
@@ -169,8 +169,17 @@ export default function ContextQuestions({
           Loading questions...
         </div>
       ) : data.length === 0 ? (
-        <div className="mt-8 text-center text-muted-foreground">
-          No questions available. Please upload videos and generate questions first.
+        <div className="mt-8 flex flex-col items-center justify-center space-y-4">
+          <p className="text-center text-muted-foreground">
+            No videos recorded on this date
+          </p>
+          <Button
+            size="lg"
+            onClick={() => setProgress(-1)}
+            className="text-lg font-medium transition-all"
+          >
+            Finish <ArrowRight className="ml-3 h-4 w-4" />
+          </Button>
         </div>
       ) : (
         <>

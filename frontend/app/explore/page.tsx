@@ -62,14 +62,10 @@ export default function Page() {
     if (Array.isArray(data.data)) {
       data.data.forEach((item: any) => {
         if (typeof item === 'string') {
-          // Old format: just paths
-          const path = item.split("/backend")[1];
-          videoPaths.push(path);
-        } else if (item.path) {
-          // New format: objects with metadata
-          const path = item.path.startsWith('/backend') 
-            ? item.path.split("/backend")[1] 
-            : item.path;
+          // Use path as-is
+          videoPaths.push(item);
+        } else if (item && item.path) {
+          const path = item.path;
           videoPaths.push(path);
           meta[path] = item;
           console.log("Video metadata:", path, item);
@@ -80,8 +76,9 @@ export default function Page() {
     console.log("Final results:", videoPaths);
     console.log("Final metadata:", meta);
     
-    setResults(videoPaths.sort());
+    setResults(videoPaths);
     setMetadata(meta);
+    setIndex(0);
     setLoading(false);
     router.refresh();
   };
@@ -164,17 +161,23 @@ export default function Page() {
             </div>
             {query !== "" ? (
               <div className="mb-2 mt-4 text-center text-lg font-medium">
-                Currently displaying query: {query}
-                {results[index] && metadata[results[index]]?.vision_answer && (
-                  <div className="mt-3 text-sm text-gray-700 bg-blue-50 p-3 rounded-lg">
-                    <div className="font-semibold text-blue-700 mb-1">🔍 AI Analysis:</div>
-                    {metadata[results[index]].vision_answer}
-                  </div>
-                )}
-                {results[index] && metadata[results[index]]?.people && (
-                  <div className="mt-2 text-base text-blue-600">
-                    👤 {metadata[results[index]].people.join(", ")}
-                  </div>
+                {results.length === 0 ? (
+                  <div className="text-muted-foreground text-base">No matching memories found</div>
+                ) : (
+                  <>
+                    Currently displaying query: {query}
+                    {results[index] && metadata[results[index]]?.vision_answer && (
+                      <div className="mt-3 text-sm text-gray-700 bg-blue-50 p-3 rounded-lg text-left">
+                        <div className="font-semibold text-blue-700 mb-1">🔍 AI Analysis:</div>
+                        {metadata[results[index]].vision_answer}
+                      </div>
+                    )}
+                    {results[index] && metadata[results[index]]?.people && metadata[results[index]]?.people.length > 0 && (
+                      <div className="mt-2 text-base text-blue-600">
+                        👤 {metadata[results[index]].people.join(", ")}
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             ) : null}

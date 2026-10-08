@@ -8,10 +8,6 @@ const nextConfig = {
         port: '5000',
         pathname: '/**',
       },
-<<<<<<< HEAD
-    ],
-  },
-=======
       {
         protocol: 'http',
         hostname: '127.0.0.1',
@@ -32,7 +28,6 @@ const nextConfig = {
       },
     ]
   },
->>>>>>> d13a9c5 (Baseline commit)
 }
 
 module.exports = nextConfig

@@ -9,6 +9,7 @@ import ContextQuestions from "@/components/quiz/contextQuestions";
 import Nav from "@/components/nav";
 import { Button } from "@/components/ui/button";
 import { Loader2, RefreshCw } from "lucide-react";
+import { format } from "date-fns";
 
 export default function Page() {
   const [progress, setProgress] = useState(-1);
@@ -44,7 +45,7 @@ export default function Page() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          date: date.toISOString()
+          date: format(date, "yyyy-MM-dd")
         }),
       });
 
