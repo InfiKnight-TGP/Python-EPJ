@@ -27,8 +27,8 @@ export default function OddOneOut({
           <p className="text-muted-foreground text-sm max-w-sm">
             Odd One Out is under development. Exercise your visual attention!
           </p>
-          <Button variant="secondary" onClick={() => handleFinish(100)}>
-            Complete Demo
+          <Button variant="secondary" disabled>
+            Coming soon
           </Button>
         </div>
       )}

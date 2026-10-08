@@ -782,7 +782,7 @@ def daily_plan():
     except Exception as e:
         print(f"Daily plan error: {e}")
         return jsonify({"error": str(e)}), 500
-    return jsonify({f"level{lvl}": [g["id"] for g in games if lvl in g["levels"]] for lvl in (1, 2, 3)})
+    return jsonify({f"level{lvl}": [g["id"] for g in games if lvl in g["levels"] and g.get("status") == "ready"] for lvl in (1, 2, 3)})
 
 
 @api.route('/performance', methods=['POST'])
