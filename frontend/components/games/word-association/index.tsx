@@ -27,8 +27,8 @@ export default function WordAssociation({
           <p className="text-muted-foreground text-sm max-w-sm">
             Word Association is under development. Practice connecting related ideas!
           </p>
-          <Button variant="secondary" onClick={() => handleFinish(100)}>
-            Complete Demo
+          <Button variant="secondary" disabled>
+            Coming soon
           </Button>
         </div>
       )}

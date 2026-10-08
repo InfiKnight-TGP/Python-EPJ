@@ -373,7 +373,7 @@ function MapNavigatorGame({ onDone }: MapNavigatorGameProps) {
                 <text
                   textAnchor="middle"
                   dominantBaseline="central"
-                  fontSize="28"
+                  fontSize="48"
                   className="select-none pointer-events-none"
                 >
                   {lm.emoji}

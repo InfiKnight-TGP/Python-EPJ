@@ -27,8 +27,8 @@ export default function WhackAMole({
           <p className="text-muted-foreground text-sm max-w-sm">
             Whack-a-Mole is under development. Test response inhibition!
           </p>
-          <Button variant="secondary" onClick={() => handleFinish(100)}>
-            Complete Demo
+          <Button variant="secondary" disabled>
+            Coming soon
           </Button>
         </div>
       )}
