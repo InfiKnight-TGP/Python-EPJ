@@ -87,7 +87,7 @@ export default function GameShell({
           <div className="max-w-md space-y-2">
             <h2 className="text-xl font-semibold">Ready to begin?</h2>
             <p className="text-sm text-muted-foreground">
-              Click Start to launch {title}. No timers apply in Level 1.
+              Click Start to launch {title}.{level === 1 && " No timers apply in Level 1."}
             </p>
           </div>
           <Button
